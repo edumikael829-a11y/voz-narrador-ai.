@@ -20,7 +20,14 @@ class TextRequest(BaseModel):
 
 @app.get("/")
 async def home():
-    index_path = Path(__file__).parent / "index.html"
+    base = Path(__file__).resolve().parent
+    index_path = base / "index.html"
+
+    if not index_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"index.html não encontrado em: {base}"
+        )
 
     return FileResponse(str(index_path))
 
@@ -60,13 +67,13 @@ async def generate_voice(data: TextRequest):
             background=BackgroundTask(os.remove, filename)
         )
 
-    except Exception:
+    except Exception as erro:
         if os.path.exists(filename):
             os.remove(filename)
 
         raise HTTPException(
-            500,
-            "Erro ao gerar a narração."
+            status_code=500,
+            detail=f"Erro ao gerar narração: {str(erro)}"
         )
 
 
