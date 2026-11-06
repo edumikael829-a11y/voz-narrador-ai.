@@ -1,8 +1,9 @@
 
 import os
 import tempfile
-import edge_tts
+from pathlib import Path
 
+import edge_tts
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
@@ -19,7 +20,9 @@ class TextRequest(BaseModel):
 
 @app.get("/")
 async def home():
-    from pathlib import Path
+    index_path = Path(__file__).parent / "index.html"
+
+    return FileResponse(str(index_path))
 
 
 @app.post("/api/tts")
@@ -27,16 +30,10 @@ async def generate_voice(data: TextRequest):
     text = data.text.strip()
 
     if not text:
-        raise HTTPException(
-            status_code=400,
-            detail="Digite um texto."
-        )
+        raise HTTPException(400, "Digite um texto.")
 
     if len(text) > 5000:
-        raise HTTPException(
-            status_code=400,
-            detail="Limite de 5000 caracteres."
-        )
+        raise HTTPException(400, "Limite de 5000 caracteres.")
 
     temp = tempfile.NamedTemporaryFile(
         suffix=".mp3",
@@ -60,10 +57,7 @@ async def generate_voice(data: TextRequest):
             filename,
             media_type="audio/mpeg",
             filename="narracao.mp3",
-            background=BackgroundTask(
-                os.remove,
-                filename
-            )
+            background=BackgroundTask(os.remove, filename)
         )
 
     except Exception:
@@ -71,8 +65,8 @@ async def generate_voice(data: TextRequest):
             os.remove(filename)
 
         raise HTTPException(
-            status_code=500,
-            detail="Erro ao gerar a narração."
+            500,
+            "Erro ao gerar a narração."
         )
 
 
