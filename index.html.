@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voz Narrador AI</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+margin:0;
+padding:20px;
+background:#090b13;
+color:white;
+font-family:Arial,sans-serif;
+}
+
+.container{
+max-width:650px;
+margin:40px auto;
+}
+
+h1{text-align:center}
+
+h1 span{color:#9b75ff}
+
+.subtitle{
+text-align:center;
+color:#aaa;
+margin-bottom:30px;
+}
+
+.panel{
+background:#151827;
+border:1px solid #292d40;
+border-radius:18px;
+padding:22px;
+}
+
+label{
+display:block;
+margin-bottom:12px;
+font-weight:bold;
+}
+
+textarea{
+width:100%;
+height:230px;
+resize:vertical;
+background:#0c0f1b;
+color:white;
+border:1px solid #34394e;
+border-radius:12px;
+padding:15px;
+font-size:16px;
+}
+
+.voice{
+background:#20243a;
+padding:14px;
+border-radius:10px;
+margin-bottom:20px;
+color:#d4c6ff;
+}
+
+button{
+width:100%;
+border:0;
+padding:16px;
+margin-top:20px;
+border-radius:12px;
+background:linear-gradient(90deg,#7551ed,#a05cff);
+color:white;
+font-size:16px;
+font-weight:bold;
+}
+
+button:disabled{opacity:.5}
+
+.counter{
+text-align:right;
+color:#999;
+font-size:12px;
+margin-top:8px;
+}
+
+#status{
+text-align:center;
+color:#b9a2ff;
+margin-top:18px;
+}
+
+.result{
+margin-top:20px;
+display:none;
+background:#0c0f1b;
+padding:16px;
+border-radius:12px;
+}
+
+audio{
+width:100%;
+margin-top:10px;
+}
+
+.download{
+display:block;
+text-align:center;
+margin-top:15px;
+color:#c4adff;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>🎙️ <span>Voz Narrador AI</span></h1>
+
+<p class="subtitle">
+Transforme seus roteiros em narrações.
+</p>
+
+<div class="panel">
+
+<label>Texto da narração</label>
+
+<div class="voice">
+🎤 Antônio — Português brasileiro<br>
+<small>Voz masculina estilo narrador</small>
+</div>
+
+<textarea id="texto"
+placeholder="Cole aqui seu roteiro do TikTok..."></textarea>
+
+<div class="counter" id="counter">
+0 / 5000 caracteres
+</div>
+
+<button id="gerar" onclick="gerarAudio()">
+GERAR NARRAÇÃO
+</button>
+
+<div id="status"></div>
+
+<div class="result" id="result">
+<strong>Seu áudio está pronto!</strong>
+<audio id="audio" controls></audio>
+<a id="download" class="download" download="narracao.mp3">
+⬇ Baixar MP3
+</a>
+</div>
+
+</div>
+</div>
+
+<script>
+const texto=document.getElementById("texto");
+
+texto.addEventListener("input",()=>{
+document.getElementById("counter").textContent=
+texto.value.length+" / 5000 caracteres";
+});
+
+async function gerarAudio(){
+
+const conteudo=texto.value.trim();
+const botao=document.getElementById("gerar");
+const status=document.getElementById("status");
+const result=document.getElementById("result");
+
+if(!conteudo){
+status.textContent="Digite seu roteiro primeiro.";
+return;
+}
+
+if(conteudo.length>5000){
+status.textContent="O limite é de 5000 caracteres.";
+return;
+}
+
+botao.disabled=true;
+botao.textContent="GERANDO...";
+status.textContent="Preparando sua narração...";
+result.style.display="none";
+
+try{
+
+const resposta=await fetch("/api/tts",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({text:conteudo})
+});
+
+if(!resposta.ok){
+const erro=await resposta.json();
+throw new Error(erro.detail||"Erro na geração.");
+}
+
+const blob=await resposta.blob();
+const url=URL.createObjectURL(blob);
+
+document.getElementById("audio").src=url;
+document.getElementById("download").href=url;
+
+result.style.display="block";
+status.textContent="Narração gerada com sucesso!";
+
+}catch(erro){
+status.textContent="Erro: "+erro.message;
+}
+
+botao.disabled=false;
+botao.textContent="GERAR NARRAÇÃO";
+}
+</script>
+
+</body>
+</html>
