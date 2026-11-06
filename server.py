@@ -1,3 +1,4 @@
+
 import os
 import tempfile
 import edge_tts
@@ -11,26 +12,37 @@ app = FastAPI()
 
 VOICE = "pt-BR-AntonioNeural"
 
+
 class TextRequest(BaseModel):
     text: str
+
 
 @app.get("/")
 async def home():
     return FileResponse("index.html")
+
 
 @app.post("/api/tts")
 async def generate_voice(data: TextRequest):
     text = data.text.strip()
 
     if not text:
-        raise HTTPException(400, "Digite um texto.")
+        raise HTTPException(
+            status_code=400,
+            detail="Digite um texto."
+        )
 
     if len(text) > 5000:
-        raise HTTPException(400, "Limite de 5000 caracteres.")
+        raise HTTPException(
+            status_code=400,
+            detail="Limite de 5000 caracteres."
+        )
 
     temp = tempfile.NamedTemporaryFile(
-        suffix=".mp3", delete=False
+        suffix=".mp3",
+        delete=False
     )
+
     filename = temp.name
     temp.close()
 
@@ -48,7 +60,10 @@ async def generate_voice(data: TextRequest):
             filename,
             media_type="audio/mpeg",
             filename="narracao.mp3",
-            background=BackgroundTask(os.remove, filename)
+            background=BackgroundTask(
+                os.remove,
+                filename
+            )
         )
 
     except Exception:
@@ -56,6 +71,18 @@ async def generate_voice(data: TextRequest):
             os.remove(filename)
 
         raise HTTPException(
-            500,
-            "Erro ao gerar a narração."
+            status_code=500,
+            detail="Erro ao gerar a narração."
         )
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    port = int(os.environ.get("PORT", 10000))
+
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=port
+    )
