@@ -19,7 +19,7 @@ class TextRequest(BaseModel):
 
 @app.get("/")
 async def home():
-    return FileResponse("index.html")
+    from pathlib import Path
 
 
 @app.post("/api/tts")
