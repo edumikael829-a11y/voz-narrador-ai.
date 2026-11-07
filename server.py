@@ -1,3 +1,4 @@
+
 import os
 import tempfile
 from pathlib import Path
@@ -53,8 +54,8 @@ async def generate_voice(data: TextRequest):
         communicate = edge_tts.Communicate(
             text,
             VOICE,
-            rate="-5%",
-            pitch="-5Hz"
+            rate="-20%",
+            pitch="-10Hz"
         )
 
         await communicate.save(filename)
