@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-VOICE = "pt-BR-AntonioNeural"
+VOICE = "pt-BR-DonatoNeural".
 
 
 class TextRequest(BaseModel):
