@@ -1,4 +1,3 @@
-
 import os
 import tempfile
 from pathlib import Path
@@ -11,7 +10,7 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-VOICE = "pt-BR-DonatoNeural"
+VOICE = "pt-BR-AntonioNeural"
 
 
 class TextRequest(BaseModel):
@@ -59,6 +58,9 @@ async def generate_voice(data: TextRequest):
         )
 
         await communicate.save(filename)
+
+        if not os.path.exists(filename) or os.path.getsize(filename) == 0:
+            raise Exception("Nenhum áudio foi gerado.")
 
         return FileResponse(
             filename,
