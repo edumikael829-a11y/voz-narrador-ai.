@@ -1,35 +1,58 @@
-
 import os
 import tempfile
+import urllib.request
+import wave
 from pathlib import Path
 
-import edge_tts
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
-from starlette.background import BackgroundTask
 from pydantic import BaseModel
+from piper import PiperVoice
 
 app = FastAPI()
 
-VOICE = "pt-BR-AntonioNeural"
+BASE_DIR = Path(__file__).parent
+MODEL_PATH = BASE_DIR / "pt_BR-faber-medium.onnx"
+CONFIG_PATH = BASE_DIR / "pt_BR-faber-medium.onnx.json"
+
+MODEL_URL = (
+    "https://huggingface.co/rhasspy/piper-voices/"
+    "resolve/main/pt/pt_BR/faber/medium/"
+    "pt_BR-faber-medium.onnx"
+)
+
+CONFIG_URL = MODEL_URL + ".json"
+
+voice = None
 
 
 class TextRequest(BaseModel):
     text: str
 
 
+def download_file(url, destination):
+    if not destination.exists():
+        urllib.request.urlretrieve(url, destination)
+
+
+@app.on_event("startup")
+async def load_voice():
+    global voice
+
+    download_file(MODEL_URL, MODEL_PATH)
+    download_file(CONFIG_URL, CONFIG_PATH)
+
+    voice = PiperVoice.load(str(MODEL_PATH))
+
+
 @app.get("/")
 async def home():
-    base = Path(__file__).resolve().parent
-    index_path = base / "index.html"
+    index = BASE_DIR / "index.html"
 
-    if not index_path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail=f"index.html não encontrado em: {base}"
-        )
+    if not index.exists():
+        raise HTTPException(404, "index.html não encontrado.")
 
-    return FileResponse(str(index_path))
+    return FileResponse(str(index))
 
 
 @app.post("/api/tts")
@@ -42,8 +65,11 @@ async def generate_voice(data: TextRequest):
     if len(text) > 5000:
         raise HTTPException(400, "Limite de 5000 caracteres.")
 
+    if voice is None:
+        raise HTTPException(503, "A voz ainda está carregando.")
+
     temp = tempfile.NamedTemporaryFile(
-        suffix=".mp3",
+        suffix=".wav",
         delete=False
     )
 
@@ -51,32 +77,22 @@ async def generate_voice(data: TextRequest):
     temp.close()
 
     try:
-        communicate = edge_tts.Communicate(
-            text,
-            VOICE,
-            rate="-20%",
-            pitch="-10Hz"
-        )
-
-        await communicate.save(filename)
-
-        if not os.path.exists(filename) or os.path.getsize(filename) == 0:
-            raise Exception("Nenhum áudio foi gerado.")
+        with wave.open(filename, "wb") as wav_file:
+            voice.synthesize_wav(text, wav_file)
 
         return FileResponse(
             filename,
-            media_type="audio/mpeg",
-            filename="narracao.mp3",
-            background=BackgroundTask(os.remove, filename)
+            media_type="audio/wav",
+            filename="narracao.wav"
         )
 
-    except Exception as erro:
+    except Exception as error:
         if os.path.exists(filename):
             os.remove(filename)
 
         raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao gerar narração: {str(erro)}"
+            500,
+            f"Erro ao gerar narração: {str(error)}"
         )
 
 
